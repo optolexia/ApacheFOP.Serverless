@@ -81,7 +81,7 @@
                 <configuration>
                     <!-- function app name -->
                     <!--suppress UnresolvedMavenProperty -->
-                    <appName>${appBaseName}</appName>
+                    <appName>${functionAppName}</appName>
                     <!-- function app resource group -->
                     <!--suppress UnresolvedMavenProperty -->
                     <resourceGroup>java-functions-group</resourceGroup>
