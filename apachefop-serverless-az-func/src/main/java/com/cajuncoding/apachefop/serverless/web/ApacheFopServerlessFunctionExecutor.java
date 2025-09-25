@@ -63,10 +63,10 @@ public class ApacheFopServerlessFunctionExecutor {
     }
 
     protected <TRequest> HttpResponseMessage ExecuteRequestInternal(
-            String xslFOBodyContent,
-            ApacheFopServerlessConfig config,
-            ApacheFopServerlessResponseBuilder<TRequest> responseBuilder,
-            Logger logger
+        String xslFOBodyContent,
+        ApacheFopServerlessConfig config,
+        ApacheFopServerlessResponseBuilder<TRequest> responseBuilder,
+        Logger logger
     ) throws TransformerException, IOException, FOPException {
         if (StringUtils.isBlank(xslFOBodyContent)) {
             logger.info(" - [BAD_REQUEST - 400] No XSL-FO body content was specified");
@@ -92,12 +92,13 @@ public class ApacheFopServerlessFunctionExecutor {
         //Execute the transformation of the XSL-FO source content to Binary PDF format...
         var pdfRenderResult = fopHelper.renderPdfResult(xslFOBodyContent, config.isGzipResponseEnabled());
 
+        //Add some contextual Logging so we can know if the PDF bytes were rendered...
+        logger.info(MessageFormat.format("[SUCCESS] Successfully Rendered PDF with [{0}] bytes.", pdfRenderResult.getPdfBytes().length));
+
         //Render the PDF Response (or EventLog Dump if specified)...
-        var response = config.isEventLogDumpModeEnabled()
+        return config.isEventLogDumpModeEnabled()
                 ? responseBuilder.BuildEventLogDumpResponse(pdfRenderResult, config)
                 : responseBuilder.BuildPdfResponse(pdfRenderResult, config);
-
-        return response;
     }
 
 }

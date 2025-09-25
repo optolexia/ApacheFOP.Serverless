@@ -1,9 +1,12 @@
-# ApacheFOP.Serverless
-*ApacheFOP.Serverless* is a ready to use server-less implementation of Apache FOP via Azure Functions. This provides a micro-service for dynamically rendering PDF binary outputs from XSL-FO source using Apache FOP.
+# ApacheFOP.Serverless -- Quality PDF Rendering-as-a-service for any Environment!
+*ApacheFOP.Serverless* is a ready to use server-less implementation of Apache FOP via Azure Functions. This provides an easy to use REST API micro-service for dynamically rendering quality PDF binary outputs from XSL-FO source using Apache FOP.
 
-You should be able to pull this code down, open with IntelliJ (after installing the Azure Toolkit for IntelliJ), and deploy to your own Subscription/Resource group and be up and running in minutes.
+When combined with the ease and simplicity of Azure Functions this project is a powerful, efficient, and scalable PDF Reporting Service that generates high quality, true paged media, reports for any environment and any client technology (.Net, NodeJS/JavaScript, Ruby,  Mobile iOS/Android, Powershell, even Windows/Mac apps, etc.)!
 
-If you like this project and/or use it the please give me a Star (c'mon it's free, and it'll make my day)! 
+You should be able to pull this code down and be up and running quickly & easily with IntelliJ or VS Code (after installing pre-requisites), or even just clone the repo and deploy directly to your Azure Subscription [via GitHub Actions with no local Java needed](#just-want-it-running-in-azure-and-dont-want-to-bother-with-any-local-installations).
+
+### Give Star 🌟
+**If you like this project and/or use it the please give it a Star 🌟 (c'mon it's free, and it'll help others find the project)!**
 
 ### [Buy me a Coffee ☕](https://www.buymeacoffee.com/cajuncoding)
 *I'm happy to share with the community, but if you find this useful (e.g for professional use), and are so inclinded,
@@ -14,13 +17,34 @@ then I do love-me-some-coffee!*
 </a> 
 
 ## Updates / Change Log
+
+##### Updated the project to v1.6 with the following:
+- Updated Apache FOP to v2.11 (latest as of 2025-05-20).
+- Update to now use Java Azure Functions v4 (v3 is fully deprecated by end of 2022).
+- Updated Java to latest supported version Java v21 ([Using Azul Zulu OpenJDK](https://www.azul.com/downloads/?version=java-21-lts&package=jdk#zulu)).
+- Updated all other packages to latest stable versions.
+- Upgraded project `apachefop-serverless-az-func.iml` to IntelliJ 2025 Community.
+- Resolved bug/breaking issue with `ApacheFopJavaResourcesFileResolver` not being used in v2.11 when calling `FopFactoryBuilder.setConfiguration()` (as it was in FOP v2.6).
+  - The new version of FOP upgraded from FOP v2.6 to v2.11 introduced a bug (breaking issue) where the `ResourceResolver` injected to the constrcutor of `FopFactoryBuilder` is not honored resulting in embedded Fonts (java resources) no longer being resolved.
+  - The custom resolver is lost when calling `FopFactoryBuilder.setConfiguration()`, whereby the code now instantiates a default resource resover that is actually passed to the `FontManager` instead of the resource resolver we provided in the constructor.
+  - This worked fine in Fop v2.6 (and maybe other versions).
+  - The resolution is to initialize `FopFactoryBuilder` differently now by parsing the configuration directly from the `Stream` using `FopConfParser` which allows us to provide the `ApacheFopJavaResourcesFileResolver` into it's constructor instead (that is then correctly honored).
+    - We are then able to call `FopConfParsergetFopFactoryBuilder()` to get the fully initialize `FopFactoryBuilder` from the `FopConfParser`.
+    - Everything works as expected after that!
+
+##### Updated the project to v1.5 with the following:
+ - Add support to read the Accessibility flag correctly from ApacheFOP configuration as noted in the documentation; a bug exists where the value is not loaded so we manually support this now in a way that is fully compliant with the documentation. 
+   - The original support from Azure Function configuration (environment variable) is still supported also.
+ - Several small code improvements for consistency.
+ - Additional debugging log added to better know if rendering process was completed (e.g. logs SUCCESS along with Pdf Byte Size).
+
 ##### Updated the project to v1.4 with the following:
  - **Added support for running, debugging, and deploying from within VS Code as well as IntelliJ IDEA**.
    - Both project types use folder context configuration, so all configuration files have now been included and checked into the Repository.
    - This should make it easier to get up and running quickly with either IDE.
  - Resolved a bug in the Font loading/path handling when running in Windows Host (due to existing font paths).
  - Updated Microsoft's `azure-functions-maven-plugin` to address various issues (esp. the need for a GUID in the deployment name which broke VS Code's ability to debug).
- - Pom.xml cleanup to eliminate various "*Problems*" flagged by VS Code's pom parsing (using M2Eclipse processor
+ - Pom.xml cleanup to eliminate various "*Problems*" flagged by VS Code's pom parsing (using M2Eclipse processor).
  - Various small code cleanup items as noted in VS Code Java "*Problems*" tab.
  
 ##### Updated the project to v1.3 with the following:
@@ -49,11 +73,9 @@ then I do love-me-some-coffee!*
  - Removed dependency on `com.sun.deploy.net.HttpRequest` import as importing it no longer compiles on the latest versions of IntelliJ IDEA; little value was added by using only one constant that was needed: _ACCEPT_ENCODING_
  - All Heading and Content type constants are now self-contained so no additional dependencies are needed.
    - _This enabled removal of the dependency on com.sun.deploy.net.HttpRequest import as importing it no longer compiles on the latest versions of IntelliJ IDEA, and is a bad practice.  Little value was added by using only 1 constant was needed, ACCEPT_ENCODING_
-
  - Notable cleanup & optimization of the Pom.xml
  - Implemented a fix for a possilbe deployment risk when AppName and ResourceGroupName values are not unique with the azure-functions-maven-plugin
    - _As noted here: https://github.com/Azure/azure-functions-java-worker/issues/140_
-
 
 ## Technical Summary:
 This project provides a REST API that recieves a POST body containing a well formed Xsl-FO Xml document ([like these Apache FOP samples](https://github.com/apache/xmlgraphics-fop/tree/trunk/fop/examples/fo/basic)). The service will respond with the rendered Pdf binary (file bytes).
@@ -71,12 +93,10 @@ If an error occurs -- likely due to incorrect Xsl-FO syntax or structure -- then
 
 
 #### Postman Example:
-<p align="center">
-<img src="/postman-test-fonts-fo.png" style="width:auto;height:auto;max-width:1200px;">
-</p>
+<p align="center"><img src="/postman-test-fonts-fo.png" width="750px"></p>
 
 ## Project Overview:
-Generating high quality printable PDF outputs from a highly flexible [pdf templating approach (separating content/data from presentation)](https://github.com/cajuncoding/PdfTemplating.XslFO) hasn't been easy in the world of .Net -- vs the world of Java where ApacheFOP has been around for a very long time.
+Generating high quality printable PDF outputs from a highly flexible [pdf templating approach (separating content/data from presentation)](https://github.com/cajuncoding/PdfTemplating.XslFO) hasn't been easy in the world of .NET -- vs the world of Java where ApacheFOP has been around for a very long time.
 
 For a more exhaustive dive into why PDF templating and markup based solutions are more powerful than report designer based solutions -- in today's modern web apps -- 
 I ramble on about that over here in: 
@@ -85,12 +105,12 @@ I ramble on about that over here in:
 
 Suffice it to say that markup based solutions have alot of value, and Xsl-FO is still one of the best ways to maintain strong software development practices by rendering PDF outputs (as a presentation output) from separated content/data + template. And Xsl-FO offers features that some approaches just can't do (looking at you *Crystal Reports*).
 
-There has been a fully managed .Net C# port of [Apache FOP](https://xmlgraphics.apache.org/fop/) (FO.Net) based on a pre-v1.0 version (*is my guesstimate*); it's old & unsupported, but still fairly functional, and I've used it very successfully on several projects. But Apache FOP is now on [v2.5 as of May 2020!](https://xmlgraphics.apache.org/fop/2.5/changes_2.5.html) with annual/bi-annual support updates still being released.
+There has been a fully managed .NET C# port of [Apache FOP](https://xmlgraphics.apache.org/fop/) (FO.Net) based on a pre-v1.0 version (*is my guesstimate*); it's old & unsupported, but still fairly functional, and I've used it very successfully on several projects. But Apache FOP is now on [v2.5 as of May 2020!](https://xmlgraphics.apache.org/fop/2.5/changes_2.5.html) with annual/bi-annual support updates still being released.
 
-So my goal has been, for a while, to take advantage of the many great innovations in the past several years to provide an interoperable integration between Java Apache FOP and .Net, without resorting to [something that makes my eyes cross (ugg).](http://codemesh.com/products/juggernet/).
+So my goal has been, for a while, to take advantage of the many great innovations in the past several years to provide an interoperable integration between Java Apache FOP and .NET, without resorting to [something that makes my eyes cross (ugg).](http://codemesh.com/products/juggernet/).
 
 Taking advantage of some awesome new innovations (in Azure) we can do this in a much cleaner way using:
- - **[C# .Net for Templating using Razor](https://github.com/cajuncoding/PdfTemplating.XslFO)** *(anything other than native Java will benefit from this)*
+ - **[C# .NET for Templating using Razor](https://github.com/cajuncoding/PdfTemplating.XslFO)** *(anything other than native Java will benefit from this)*
  - **Microservice** for integration architecture
  - **REST API** for interoperability
  - **Azure Function** for native Java Support
@@ -103,6 +123,12 @@ I'm definitely not the only person to think of this, and definitely gleaned some
 But, I did find that article left alot of nebulous details unclear, and would expect that a Java novice may really struggle to get it up and running. Especially the dependency on the command line tutorial, and lack of guidance on Java IDE, or how to Debug/Test, etc.
 
 And ultimately, it didn't provide any insight on how to configure Maven correctly *(I can hear some devs asking "what's Maven" right now)* or any code at all really. So, **Kudos** for the intro, but I hope this helps to bring it across the goal line!
+
+### Conceptual Diagram - PDF-as-a-service:
+<p align="center"><img src="https://user-images.githubusercontent.com/20844814/166123451-afd6a573-9e9f-452d-a0b9-4512ee6cc189.png" width="750px" /></p>
+
+### Conceptual Diagram - PDF Templating:
+<p align="center"><img src="https://user-images.githubusercontent.com/20844814/166123633-8e15a41b-6510-4cc9-a991-b4dfc25f08fe.png" width="750px" /></p>
 
 ## Getting Started:
 Here's the high level steps to get started...
@@ -136,6 +162,23 @@ If you'd rather just deploy directly to Azure, then there's some info on using G
 ## Additional Features:
 
 ### GZIP Compression:
+
+#### Request Compression:
+Since some reports may be quite large XSL-FO sources you can submit them with GZIP compression to reduce the size of the request payload.
+This is especially useful for large reports with lots of text content, as the text tends to be more compressible than binary data.
+
+To do this you should post the payload to the `/api/apache-fop/gzip` endpoint (insetead of the default `/api/apache-fop/xslfo` which expects `String` inputs) which expectes a GZIP compressed Byte Array (`Byte[]`) content body on the request.
+
+In addition the following Headerss should be correctly specified on the Request:
+- `Content-Encoding`: `gzip`
+- `Content-Type`: `application/octet-stream`
+
+This is already completely supported, and handled for you, when using the .NET Client available in Nuget and discussed in more detail below 👇: [PdfTemplating.XslFO.Render.ApacheFOP.Serverless](https://www.nuget.org/packages/PdfTemplating.XslFO.Render.ApacheFOP.Serverless/).
+
+**NOTE:** The reason that we have two distinct/separate endpoints is because it allows us to optimize the endpoints using Azure Funcitons default binding and ensures we are using any optimizations that Microsoft may provide
+ for different kinds of input bindings (`String` vs `Byte Array`) -- improving performance & minimizing any risk of double encoding/de-coding of large content body reqeusts, unnecessary memory utilizaiton, streaming optimizations, etc..
+
+ ### Response Compression
 In addition to rendering the PDF, this service already implements GZIP compression for returning the Binary PDF files. This can greatly improve performance and download times, especially for PDFs rendered without much imagery, as the text content bytes tends to be more compressible.
 
 All you need to do is add the `Accept-Encoding` header with a value of `gzip` to the request:
@@ -178,57 +221,58 @@ Configuration Values:
 - `KeepWarmCronSchedule` = `0 */5 * * * *` _(also required configuration for the KeepWarmFunction)_
 - `DebuggingEnabled` = `true` (Optional but very helpful once you start using it to return debug details in the responses).
 
-## Calling the Service from .Net
+## Calling the Service from .NET
 
 ### Snippet:
-Because I talked about follow-through up above, I'd be amiss if I didn't provide a sample implementation of calling this code from .Net.
+Because I talked about follow-through up above, I'd be amiss if I didn't provide a sample implementation of calling this code from .NET.
 
-Assuming the use of the great *RESTSharp library* for REST api calls, and the Xsl-FO content is validated and parsed as an *XDocument* (Linq2Xml)... this sample should get you started on the .Net side as a client calleing the new PDF microservice.
+Assuming the use of the great *Flurl library* for REST api calls, and the Xsl-FO content is validated and parsed as an *XDocument* (Linq2Xml)... this sample should get you started on the .NET side as a client calleing the new PDF microservice.
 
-*NOTE: Just use RESTSharp and avoid [incorrectly implementing HttpClient (hint, it should be a singleton)](https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/)*
+*NOTE: Just use (Flurl)[https://flurl.dev/] or (RESTSharp)[https://restsharp.dev/] and avoid [incorrectly implementing HttpClient (hint, it should be a singleton)](https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/)*
 
-Snippet taken from the [implementation here](https://github.com/cajuncoding/PdfTemplating.XslFO/blob/feature/iniial_support_for_apache_fop_serverless_rendering/PdfTemplating.XslFO.Render.ApacheFOP.Serverless/XslFOPdfRenderService.cs), in my PdfTemplating project.
+Here's a very simple client class that will get the job done! But this does not include functionality to handle debugging, viewing the event log which is returned in the response headers (and may be gzipped if large), etc.  Therefore you might be interested in the readily available [.NET Client that's available in Nuget](https://www.nuget.org/packages/PdfTemplating.XslFO.Render.ApacheFOP.Serverless) -- more details below in the _**.NET Client**_ section.
 
 ```csharp
-using RestSharp;
-using RestSharp.CustomExtensions;
 using System;
-using System.CustomExtensions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+using System.Net.Mime;
+using System.Text;
+using Flurl;
+using Flurl.Http;
 
-namespace PdfTemplating.XslFO.ApacheFOP.Serverless
+namespace PdfTemplating.XslFO.Render.ApacheFOP.Serverless
 {
-    //READ from Configuration, or DI Constructor Injection
-    private string apacheFOPServiceHost = "http://localhost:7071";
-    private string apacheFOPServiceApi = "api/apache-fop/xslfo";
-
-    public static class ApacheFOPServerless
+    public class ApacheFOPServerlessClient
     {
-        public async Task<byte[]> RenderPdfBytesAsync(XDocument xslFODoc)
+        public Uri ApacheFOPServerlessUri { get; protected set; }
+        public string? AzFuncAuthCode { get; protected set; }
+
+        public ApacheFOPServerlessClient(Uri pdfServiceUri, string? azFuncAuthCode = null)
         {
-            //Initialize the Xsl-FO microservice via configuration...
-            var restClient = new RestClient(apacheFOPServiceHost);
+            ApacheFOPServerlessUri = pdfServiceUri;
+            AzFuncAuthCode = azFuncAuthCode;
+        }
 
-            //Get the Raw Xml Source for our Xsl-FO to be tansformed into Pdf binary...
-            var xslFoSource = xslFODoc.ToString();
-
-            //Create the REST request for the Apache FOP micro-service...
-            var restRequest = new RestRequest(apacheFOPServiceApi, Method.POST);
-            restRequest.AddRawTextBody(xslFoSource, ContentType.Xml);
-
-            //Execute the request to the service, validate, and retrieve the Raw Binary resposne...
-            var restResponse = await restClient.ExecuteWithExceptionHandlingAsync(restRequest);
-
-            var pdfBytes = restResponse.RawBytes;
-            return pdfBytes;            
+        public async Task<byte[]> RenderPdfAsync(string xslfoMarkup)
+        {
+            var pdfServiceUrl = ApacheFOPServerlessUri
+                .SetQueryParam("code", AzFuncAuthCode, NullValueHandling.Remove);
+            
+            using var response = await pdfServiceUrl.PostAsync(
+                new StringContent(xslfoMarkup, Encoding.UTF8, MediaTypeNames.Application.Xml)
+            );
+            
+            var pdfBytes = await response.GetBytesAsync();
+            return pdfBytes;
         }
     }
 }
 ```
 
-### .Net PdfTemplating (Full blown) Implementation:
-A full blown implementation of templating + ApacheFOP.Serverless is in a branch of my [Pdf Templating project here](https://github.com/cajuncoding/PdfTemplating.XslFO/tree/feature/iniial_support_for_apache_fop_serverless_rendering).
+### .Net PdfTemplating (Full blown) Sample Implementation & .NET Client:
+A full blown implementation of `Razor Templating + ApacheFOP.Serverless` is available in my [PdfTemplating.XslFO project here](https://github.com/cajuncoding/PdfTemplating.XslFO).
+
+#### .NET Client
+The `PdfTemplating.XslFO` project also provides ready-to-use .NET Client for `ApacheFOP.Serverless` that is readily available in Nuget: [PdfTemplating.XslFO.Render.ApacheFOP.Serverless](https://www.nuget.org/packages/PdfTemplating.XslFO.Render.ApacheFOP.Serverless/)
 
 It illustrates the use of both Xslt and/or Razor templates from ASP.Net MVC to render PDF Binary reports dynamically from queries to the [Open Movie Database API](http://www.omdbapi.com/). And it has now been enhanced to also illustrate the use of _ApacehFOP.Serverless_ microservice for rendering instead of the embedded legacy FO.Net implementation.
 
