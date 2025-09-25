@@ -23,7 +23,7 @@ steps:
     command: 'custom'
     customCommand: 'install -g azure-functions-core-tools@4'            
 # Maven Package - create the function artifacts in
-- task: Maven@2
+- task: Maven@4
   displayName: 'Maven pom.xml'
   inputs:
     mavenPomFile: 'apachefop-serverless-az-func/pom.xml'
