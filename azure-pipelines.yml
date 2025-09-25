@@ -9,8 +9,14 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-# Maven Package - create the function artifacts in
 steps:
+# Install Java 
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '21'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
+# Maven Package - create the function artifacts in
 - task: Maven@2
   displayName: 'Maven pom.xml'
   inputs:
