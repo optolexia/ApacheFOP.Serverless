@@ -16,6 +16,12 @@ steps:
     versionSpec: '21'
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
+# Install Azure functions core tools
+- task: Npm@1
+  inputs:
+    #this is needed so that the function extension install in the maven task doesn't fail
+    command: 'custom'
+    customCommand: 'install -g azure-functions-core-tools@4'            
 # Maven Package - create the function artifacts in
 - task: Maven@2
   displayName: 'Maven pom.xml'
