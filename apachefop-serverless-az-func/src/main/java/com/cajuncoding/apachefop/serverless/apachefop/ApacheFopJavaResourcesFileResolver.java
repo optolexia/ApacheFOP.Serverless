@@ -64,7 +64,7 @@ public class ApacheFopJavaResourcesFileResolver implements ResourceResolver {
                 //If the path can't be safely mapped we return null to be cached so future lookups are not attempted.
                 //NOTE: So that we don't black hole this we attempt to log to the system out...
                 if(mappedPath == null) {
-                    System.out.print("Java Resource Path could not be resolved for: " + uri.toString());
+                    // System.out.print("Java Resource Path could not be resolved for: " + uri.toString());
                     return null;
                 }
 
